@@ -1,4 +1,4 @@
-from TestFuncClass import *
+from JacobianEval import *
 
 
 class MySQP:
@@ -46,4 +46,5 @@ class MySQP:
         return penalty
 
     @staticmethod
-    def Jacobi(input_func):
+    def Jacobi(input_func, x):
+
