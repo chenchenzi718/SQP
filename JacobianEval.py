@@ -9,15 +9,32 @@ class JacobianEval:
         self.jac_m = sy.zeros(len(vars), len(vars))
         self.His_m = sy.zeros(len(vars), len(vars))
 
+        self.jac_state = False
+        self.hes_state = False
+
     # 获取雅克比矩阵
     def jacobi(self):
         self.jac_m = self.funcs.jacobian(self.vars)
+        self.jac_state = True
         return self.jac_m
+
+    # 返回numerical jacobi
+    def n_jacobi(self, x):
+        if not self.jac_m:
+            self.jacobi()
+        return (sy.lambdify(self.vars, self.jac_m, 'numpy'))(x[0], x[1])
 
     # 获取海塞矩阵
     def hessian(self):
         self.His_m = sy.hessian(self.funcs, self.vars)
+        self.hes_state = True
         return self.His_m
+
+    # 返回numerical hessian
+    def n_hessian(self, x):
+        if not self.hes_state:
+            self.hessian()
+        return (sy.lambdify(self.vars, self.His_m, 'numpy'))(x[0], x[1])
 
 
 if __name__ == "__main__":
@@ -46,7 +63,9 @@ if __name__ == "__main__":
         print(f"the jacobian matrix is {jac}")
         print(f"the hessian matrix is {his}")
         print(f_jac(1, 2))
+        print(h.n_jacobi(np.array([1, 2])))
         print(f_his(1, 2))
+        print(h.n_hessian(np.array([1, 2])))
 
     if test_Rosenbrock:
         y1, y2 = sy.symbols("y1, y2")
@@ -67,4 +86,5 @@ if __name__ == "__main__":
         print(f"the jacobian matrix is {jac}")
         print(f"the hessian matrix is {his}")
         print(f_jac(0.41494475, 0.1701105))
+        print(f_jac(0.5, 0))
         print(f_his(0.41494475, 0.1701105))
