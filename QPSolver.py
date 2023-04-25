@@ -43,9 +43,9 @@ class MyQPSolver:
     # 建立整个矩阵系统
     def construct_matrix(self):
         self.A = self.cons_func_jac[:self.eq_num, :]
-        self.b = -(self.cons_func_val[:self.eq_num, :])
+        self.b = -(self.cons_func_val[:self.eq_num])
         self.G = -(self.cons_func_jac[self.eq_num:, :])
-        self.h = self.cons_func_val[self.eq_num:, :]
+        self.h = self.cons_func_val[self.eq_num:]
 
     # 解决qp问题的dual问题
     def qp_dual_solver(self):
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     lb = -0.6 * np.ones(3)
     ub = +0.7 * np.ones(3)
 
-    cons = (
+    cons = [
         {'type': 'eq', 'fun': lambda x:  x[0] + x[1] + x[2] - 1},
         {'type': 'ineq', 'fun': lambda x: -x[0] - 2 * x[1] - x[2] + 3},
         {'type': 'ineq', 'fun': lambda x: -2 * x[0] - x[2] + 2},
@@ -77,11 +77,15 @@ if __name__ == "__main__":
         {'type': 'ineq', 'fun': lambda x: -x[0] + 0.7},
         {'type': 'ineq', 'fun': lambda x: -x[1] + 0.7},
         {'type': 'ineq', 'fun': lambda x: -x[2] + 0.7},
-    )
+    ]
 
     cons_func_jac = -np.array([[-1., -1., -1.], [1., 2., 1.], [2., 0., 1.], [-1., 2., -1.], [-1., 0., 0.], [0., -1., 0.], [0., 0., -1.],
                    [1., 0., 0.], [0., 1., 0.], [0., 0., 1.]])
-    cons_func_val = [-1., 3., 2., -2., 0.6, 0.6, 0.6, 0.7, 0.7, 0.7]
+    cons_func_val = np.array([-1., 3., 2., -2., 0.6, 0.6, 0.6, 0.7, 0.7, 0.7])
 
+    qp_sol = MyQPSolver(P, q, cons, cons_func_jac, cons_func_val)
+    d, lamb = qp_sol.qp_dual_solver()
+    print(f"Primal: d = {d}")
+    print(f"Dual: lambda = {lamb}")
 
 

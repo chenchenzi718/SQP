@@ -1,4 +1,5 @@
 from JacobianEval import *
+from QPSolver import *
 
 
 class MySQP:
@@ -6,7 +7,7 @@ class MySQP:
         默认输入的是二维的问题，input_func对应输入的优化函数，cons为约束，bounds对应着区间,epi对应着最终收敛结束的值，sigma为罚函数的参数
         x0为输入的初始值
     """
-    def __init__(self, input_func, cons, bounds, epi=1e-3, sigma=1, x0=np.array([0.5, 0.0])):
+    def __init__(self, input_func, cons, bounds, epi=1e-5, sigma=1, x0=np.array([0.5, 0.0])):
         self.func = input_func
         self.cons = cons
         self.bounds = bounds
@@ -113,4 +114,32 @@ class MySQP:
             c.append([cons['fun'](x)])
         return np.array(c)
 
-    
+    # 如果W_k不是正定的，去做正定矫正
+
+
+    # sqp算法，得到函数的极小值
+    def my_sqp(self):
+        k = 0
+        x_k = self.x0
+        lambda_k = np.zeros(len(self.cons_with_bounds))
+
+        # 规定循环次数
+        epoch = 200
+        for k in range(epoch):
+            W_k = self.Wk_lagrange_hessian(x_k, lambda_k)
+            g_k = self.g_k(x_k)
+            A_k = self.A_k(x_k)
+            c_k = self.c_k(x_k)
+
+            # 进行二次规划求解
+            qp_sol = MyQPSolver(W_k, g_k, cons=self.cons_with_bounds, cons_func_jac=A_k, cons_func_val=c_k)
+            d_k, lagrange_multiplier_k = qp_sol.qp_dual_solver()
+
+            if np.linalg.norm(d_k, ord=2) <= self.epi:
+                break
+
+            x_k += d_k
+            lambda_k += (lagrange_multiplier_k - lambda_k)
+
+        # 输出
+        return x_k, lambda_k
