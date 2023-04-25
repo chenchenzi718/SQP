@@ -75,13 +75,13 @@ class MySQP:
 
         return penalty
 
-    # sqp中的计算jacobi函数，sym_jacobi为符号函数
+    # sqp中的计算jacobi函数，sym_jacobi为符号函数, 返回的为一个行向量
     def sqp_jacobi(self, sym_jacobi, x):
         y1, y2 = sy.symbols("y1, y2")
         f_jac = sy.lambdify([y1, y2], sym_jacobi, 'numpy')  # 通过这段话转化为可以计算的函数表达式
         return f_jac(x[0], x[1])
 
-    # sqp中的计算hessian函数，sym_func为符号函数
+    # sqp中的计算hessian函数，sym_hessian为符号函数
     def sqp_hessian(self, sym_hessian, x):
         y1, y2 = sy.symbols("y1, y2")
         f_his = sy.lambdify([y1, y2], sym_hessian, 'numpy')
@@ -114,11 +114,8 @@ class MySQP:
             c.append([cons['fun'](x)])
         return np.array(c)
 
-    # 如果W_k不是正定的，去做正定矫正
-
-
-    # sqp算法，得到函数的极小值
-    def my_sqp(self):
+    # sqp算法，得到函数的极小值，这里的W直接取的lagrange函数的hessian矩阵
+    def my_sqp_without_ortho_correct(self):
         k = 0
         x_k = self.x0
         lambda_k = np.zeros(len(self.cons_with_bounds))
@@ -143,3 +140,29 @@ class MySQP:
 
         # 输出
         return x_k, lambda_k
+
+    """
+        上面实现的sqp算法中W直接取得是lagrange函数的hessian阵，这有可能是不正定的，下面做一个正定的做法
+    """
+
+    # 计算原问题lagrange函数的数值
+    def lagrange_func_val(self, x, _lambda):
+        val = self.func(x)
+        c = self.c_k(x)
+        return val - (_lambda.reshape(1, -1)) @ c
+
+    # 计算原问题lagrange函数的jacobi矩阵数值
+    def lagrange_jacobi(self, x, _lambda):
+        j = self.sqp_jacobi(self.test_func_jac, x).T
+        for i, cons in enumerate(self.cons_with_bounds):
+            j -= _lambda[i] * self.sqp_jacobi(self.cons_func_jac[i], x).T
+        return j
+
+    # 如果W_k不是正定的，去做正定矫正，mode可以为simple与BFGS
+    def Wk_ortho_correct(self, mode="BFGS"):
+        if mode == "simple":
+            """
+            此时做的是加上最小的负的特征值的绝对值方式调整，如果第一次迭代的hessian就是一个负定，那么使用BFGS也没用，因此第一次不
+            是正定时要强硬的变成正定阵
+            
+            """

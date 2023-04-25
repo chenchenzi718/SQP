@@ -13,5 +13,5 @@ if __name__ == '__main__':
     print(res.x)
 
     sqp = MySQP(input_func=test_func.test_func_val, cons=cons, bounds=bounds)
-    res_mine, lagrange_multiplier = sqp.my_sqp()
+    res_mine, lagrange_multiplier = sqp.my_sqp_without_ortho_correct()
     print(res_mine)
