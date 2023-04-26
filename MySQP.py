@@ -1,19 +1,22 @@
 from JacobianEval import *
 from QPSolver import *
+from scipy.optimize import linesearch
 
 
 class MySQP:
     """
-        默认输入的是二维的问题，input_func对应输入的优化函数，cons为约束，bounds对应着区间,epi对应着最终收敛结束的值，sigma为罚函数的参数
+        默认输入的是二维的问题，input_func对应输入的优化函数，cons为约束，bounds对应着区间,
+        rou对应着罚函数一维搜索的区间范围，epi对应着最终收敛结束的值，sigma为罚函数的参数
         x0为输入的初始值
     """
-    def __init__(self, input_func, cons, bounds, epi=1e-5, sigma=1, x0=np.array([0.5, 0.0])):
+    def __init__(self, input_func, cons, bounds, rou=1, epi=1e-5, sigma=100, x0=np.array([0.5, 0.0])):
         self.func = input_func
         self.cons = cons
         self.bounds = bounds
         self.epi = epi
         self.sigma = sigma
         self.x0 = x0
+        self.rou = rou
 
         # 将bounds转化为cons存储为列表
         self.bounds_to_cons = []
@@ -143,6 +146,36 @@ class MySQP:
             else:
                 return W
 
+    # 一维搜索算法，要确定罚函数一维搜索的系数以及“最小”结果
+    def my_linesearch(self, x_k, d_k):
+        # 因为这个罚函数是不可导的，这里我们采用0.618法进行计算最小值
+        # alpha取值范围为[0,rou]
+        r = 0.618
+        a = 0
+        alpha = 1.
+        b = self.rou
+        x1 = b - r * (b - a)
+        x2 = a + r * (b - a)
+
+        epoch = 200
+        for i in range(epoch):
+            if abs(x1 - x2) < self.epi:
+                alpha = (x1 + x2)/2.
+                break
+
+            f1 = self.penalty_function(x_k + x1 * d_k)
+            f2 = self.penalty_function(x_k + x2 * d_k)
+
+            if f1 > f2:
+                a = x1
+                x1 = x2
+                x2 = a + r * (b - a)
+            else:
+                b = x2
+                x2 = x1
+                x1 = a + (1. - r) * (b - a)
+        return alpha
+
     # sqp算法，得到函数的极小值，这里的W直接取的lagrange函数的hessian矩阵
     def my_sqp(self):
         k = 0
@@ -165,11 +198,10 @@ class MySQP:
             if np.linalg.norm(d_k, ord=2) <= self.epi:
                 break
 
-            x_k += d_k
-            lambda_k += (lagrange_multiplier_k - lambda_k)
+            alpha = self.my_linesearch(x_k, d_k)
+            x_k += alpha * d_k
+            lambda_k += alpha * (lagrange_multiplier_k - lambda_k)
 
         # 输出
         return x_k, lambda_k
-
-
 
