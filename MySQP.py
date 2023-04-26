@@ -114,37 +114,6 @@ class MySQP:
             c.append([cons['fun'](x)])
         return np.array(c)
 
-    # sqp算法，得到函数的极小值，这里的W直接取的lagrange函数的hessian矩阵
-    def my_sqp_without_ortho_correct(self):
-        k = 0
-        x_k = self.x0
-        lambda_k = np.zeros(len(self.cons_with_bounds))
-
-        # 规定循环次数
-        epoch = 200
-        for k in range(epoch):
-            W_k = self.Wk_lagrange_hessian(x_k, lambda_k)
-            g_k = self.g_k(x_k)
-            A_k = self.A_k(x_k)
-            c_k = self.c_k(x_k)
-
-            # 进行二次规划求解
-            qp_sol = MyQPSolver(W_k, g_k, cons=self.cons_with_bounds, cons_func_jac=A_k, cons_func_val=c_k)
-            d_k, lagrange_multiplier_k = qp_sol.qp_dual_solver()
-
-            if np.linalg.norm(d_k, ord=2) <= self.epi:
-                break
-
-            x_k += d_k
-            lambda_k += (lagrange_multiplier_k - lambda_k)
-
-        # 输出
-        return x_k, lambda_k
-
-    """
-        上面实现的sqp算法中W直接取得是lagrange函数的hessian阵，这有可能是不正定的，下面做一个正定的做法
-    """
-
     # 计算原问题lagrange函数的数值
     def lagrange_func_val(self, x, _lambda):
         val = self.func(x)
@@ -158,11 +127,49 @@ class MySQP:
             j -= _lambda[i] * self.sqp_jacobi(self.cons_func_jac[i], x).T
         return j
 
-    # 如果W_k不是正定的，去做正定矫正，mode可以为simple与BFGS
-    def Wk_ortho_correct(self, mode="BFGS"):
+    # 如果W_k不是正定的，去做正定矫正，mode可以为simple,其他的暂时未考虑
+    def Wk_ortho_correct(self, W, mode="simple"):
         if mode == "simple":
             """
             此时做的是加上最小的负的特征值的绝对值方式调整，如果第一次迭代的hessian就是一个负定，那么使用BFGS也没用，因此第一次不
             是正定时要强硬的变成正定阵
-            
+
             """
+            eigenvalue, featurevector = np.linalg.eig(W)
+            min_eigenvalue = np.min(eigenvalue)
+            if min_eigenvalue <= 0:
+                W += (abs(min_eigenvalue) + 1e-3) * np.eye(len(eigenvalue))
+                return W
+            else:
+                return W
+
+    # sqp算法，得到函数的极小值，这里的W直接取的lagrange函数的hessian矩阵
+    def my_sqp(self):
+        k = 0
+        x_k = self.x0
+        lambda_k = np.zeros(len(self.cons_with_bounds))
+
+        # 规定循环次数
+        epoch = 200
+        for k in range(epoch):
+            W_k = self.Wk_lagrange_hessian(x_k, lambda_k)
+            g_k = self.g_k(x_k)
+            A_k = self.A_k(x_k)
+            c_k = self.c_k(x_k)
+
+            # 进行二次规划求解
+            W_k = self.Wk_ortho_correct(W_k)   # 做一次正定判定与矫正
+            qp_sol = MyQPSolver(W_k, g_k, cons=self.cons_with_bounds, cons_func_jac=A_k, cons_func_val=c_k)
+            d_k, lagrange_multiplier_k = qp_sol.qp_dual_solver()
+
+            if np.linalg.norm(d_k, ord=2) <= self.epi:
+                break
+
+            x_k += d_k
+            lambda_k += (lagrange_multiplier_k - lambda_k)
+
+        # 输出
+        return x_k, lambda_k
+
+
+
