@@ -19,9 +19,12 @@ class MySQP:
         self.rou = rou
 
         # 将bounds转化为cons存储为列表
-        self.bounds_to_cons = []
-        self.__change_bounds_to_cons()
-        self.cons_with_bounds = list(self.cons) + self.bounds_to_cons
+        if bounds is not None:
+            self.bounds_to_cons = []
+            self.__change_bounds_to_cons()
+            self.cons_with_bounds = list(self.cons) + self.bounds_to_cons
+        else:
+            self.cons_with_bounds = self.cons
 
         self.test_func_jac = None
         self.test_func_hes = None
@@ -71,9 +74,7 @@ class MySQP:
                 return min(0., constrain['fun'](y))
 
         penalty = self.func(x)
-        for cons in self.cons:
-            penalty += self.sigma * abs(c_(cons, x))
-        for cons in self.bounds_to_cons:
+        for cons in self.cons_with_bounds:
             penalty += self.sigma * abs(c_(cons, x))
 
         return penalty
