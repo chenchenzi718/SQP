@@ -32,6 +32,9 @@ class MySQP:
         self.cons_func_hes = []
         self.__build_sy_jacobi_hessian()
 
+        # 这个变量用来记录sqp的x_k中间结果
+        self.mysqp_intermedium_result = []
+
     # 给出需要计算的函数以及约束函数的jacobi的符号计算结果
     def __build_sy_jacobi_hessian(self):
         y1, y2 = sy.symbols("y1, y2")
@@ -181,6 +184,7 @@ class MySQP:
     def my_sqp(self):
         k = 0
         x_k = self.x0
+        self.mysqp_intermedium_result.append(x_k)
         lambda_k = np.zeros(len(self.cons_with_bounds))
 
         # 规定循环次数
@@ -201,6 +205,7 @@ class MySQP:
 
             alpha = self.my_linesearch(x_k, d_k)
             x_k += alpha * d_k
+            self.mysqp_intermedium_result.append(x_k)
             lambda_k += alpha * (lagrange_multiplier_k - lambda_k)
 
         # 输出

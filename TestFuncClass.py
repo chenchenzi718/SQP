@@ -8,7 +8,7 @@ class TestFunc:
     def test_func_val(self, input_val):
         # define a function named Rosenbrock
         if self.test_func_str == "Rosenbrock":
-            return np.sum(100.0*(input_val[1]-input_val[0]**2.0)**2.0 + (1-input_val[0])**2.0)
+            return 100.0*((input_val[1]-input_val[0]**2.0)**2.0) + (1-input_val[0])**2.0
         if self.test_func_str == "test_1":    # 返回一个f(x,y)=x^3-y^3+xy+2x^2
             return input_val[0]**3.0 - input_val[1]**3.0 + input_val[0] * input_val[1] + 2.0 * input_val[0]**2.0
 
