@@ -4,7 +4,8 @@ from MySQP import *
 
 
 # func内为TestFunc类，actual_x输入minimize函数得到的结果，my_sqp_medium_x输入的为mysqp函数迭代过程中产生的x_k
-def pic_my_sqp(func_class: TestFunc, actual_x, my_sqp_medium_x=None, test_func_name="Rosenbrock"):
+# 如果actual_x 与 my_sqp_medium_x 均取None，则意味着我想要进行多次取初值作图的操作，因此会重新计算多个初值对应结果，无需传入这两个参数
+def pic_my_sqp(func_class: TestFunc, actual_x=None, my_sqp_medium_x=None, test_func_name="Rosenbrock"):
     func = func_class.test_func_val
     dx = 0.01
     dy = 0.01
@@ -30,10 +31,11 @@ def pic_my_sqp(func_class: TestFunc, actual_x, my_sqp_medium_x=None, test_func_n
     # plt.clabel(contour, inline=1, fontsize=10)
     plt.colorbar()
 
-    # 在图上画出最终收敛点
-    plt.scatter(actual_x[0], actual_x[1], marker="*", c="y", s=100)
+    if (my_sqp_medium_x is not None) and (actual_x is not None):
+        # 一个初值进行绘制
+        # 在图上画出最终收敛点
+        plt.scatter(actual_x[0], actual_x[1], marker="*", c="y", s=100)
 
-    if my_sqp_medium_x is not None:
         # 在图上画出在sqp迭代过程中的点
         plt_x = []
         plt_y = []
@@ -50,8 +52,15 @@ def pic_my_sqp(func_class: TestFunc, actual_x, my_sqp_medium_x=None, test_func_n
         sqp = MySQP(input_func=func_class.test_func_val, cons=func_class.cons, bounds=func_class.bounds)
 
         for primary_val in mat:
+            # optimize结果
+            res = minimize(func_class.test_func_val, primary_val, method='SLSQP',
+                           bounds=func_class.bounds, constraints=func_class.cons)
+            # 我的sqp结果
             res_mine, _ = sqp.my_sqp(x0=primary_val)
             mysqp_intermedium_result = sqp.mysqp_intermedium_result
+
+            # 在图上画出最终收敛点
+            plt.scatter(res.x[0], res.x[1], marker="*", c="y", s=100)
 
             # 在图上画出在sqp迭代过程中的点
             plt_x = []
@@ -68,7 +77,7 @@ def pic_my_sqp(func_class: TestFunc, actual_x, my_sqp_medium_x=None, test_func_n
 if __name__ == '__main__':
 
     # test_func_name 可以取 "Rosenbrock" 或者 “test_1”
-    test_func_name = "Rosenbrock"
+    test_func_name = "test_1"
 
     # 建立TestFunc类，根据输入的不同测试函数选择不同的约束条件
     test_func_class = TestFunc(test_func_str=test_func_name)
