@@ -3,14 +3,18 @@ from scipy.optimize import minimize
 from MySQP import *
 
 
-# func内为待优化函数，actual_x输入minimize函数得到的结果，my_sqp_medium_x输入的为mysqp函数迭代过程中产生的x_k
-def pic_my_sqp(func, actual_x, my_sqp_medium_x, bound=None):
-    dx = 0.001
-    dy = 0.001
-    if bound is None:
-        d_max = np.max(np.abs(actual_x))
-        x = np.arange(-5.0 * d_max, 5.0 * d_max, dx)
-        y = np.arange(-5.0 * d_max, 5.0 * d_max, dy)
+# func内为TestFunc类，actual_x输入minimize函数得到的结果，my_sqp_medium_x输入的为mysqp函数迭代过程中产生的x_k
+def pic_my_sqp(func_class: TestFunc, actual_x, my_sqp_medium_x=None, test_func_name="Rosenbrock"):
+    func = func_class.test_func_val
+    dx = 0.01
+    dy = 0.01
+    if test_func_name == "Rosenbrock":
+        x = np.arange(-2., 2., dx)
+        y = np.arange(-2., 2., dy)
+        X, Y = np.meshgrid(x, y)
+    elif test_func_name == "test_1":
+        x = np.arange(-3., 3., dx)
+        y = np.arange(-3., 3., dy)
         X, Y = np.meshgrid(x, y)
     else:
         x = np.arange(-2., 2., dx)
@@ -26,23 +30,68 @@ def pic_my_sqp(func, actual_x, my_sqp_medium_x, bound=None):
     # plt.clabel(contour, inline=1, fontsize=10)
     plt.colorbar()
 
-    plt.scatter(actual_x[0], actual_x[1], marker="*")
+    # 在图上画出最终收敛点
+    plt.scatter(actual_x[0], actual_x[1], marker="*", c="y", s=100)
 
-    plt.show()
+    if my_sqp_medium_x is not None:
+        # 在图上画出在sqp迭代过程中的点
+        plt_x = []
+        plt_y = []
+        for _array in my_sqp_medium_x:
+            plt_x.append(_array[0])
+            plt_y.append(_array[1])
+        plt.plot(plt_x, plt_y, "w--")
+        plt.title("Primary value x0 iteration in method "+str(test_func_name))
+        plt.show()
+    else:
+        # 五个初值进行绘制
+        mat = np.array([[-1.5, -1.], [-1., 1.], [1.0, 0.5], [0.5, -1.5], [1.5, -1.]])
+
+        sqp = MySQP(input_func=func_class.test_func_val, cons=func_class.cons, bounds=func_class.bounds)
+
+        for primary_val in mat:
+            res_mine, _ = sqp.my_sqp(x0=primary_val)
+            mysqp_intermedium_result = sqp.mysqp_intermedium_result
+
+            # 在图上画出在sqp迭代过程中的点
+            plt_x = []
+            plt_y = []
+            for _array in mysqp_intermedium_result:
+                plt_x.append(_array[0])
+                plt_y.append(_array[1])
+            plt.plot(plt_x, plt_y, "w--")
+
+        plt.title("Multiple Primary value x0 iteration in method "+str(test_func_name))
+        plt.show()
 
 
 if __name__ == '__main__':
 
+    # test_func_name 可以取 "Rosenbrock" 或者 “test_1”
     test_func_name = "Rosenbrock"
-    test_func = TestFunc(test_func_str=test_func_name)
-    cons, bounds = test_func.test_func_constraint()
-    x0 = np.array([0.5, 0.])
-    rosen = test_func.test_func_val
-    res = minimize(rosen, x0, method='SLSQP', bounds=bounds, constraints=cons)
-    print(res.x)
 
-    sqp = MySQP(input_func=test_func.test_func_val, cons=cons, bounds=bounds)
-    res_mine, lagrange_multiplier = sqp.my_sqp()
-    print(res_mine)
+    # 建立TestFunc类，根据输入的不同测试函数选择不同的约束条件
+    test_func_class = TestFunc(test_func_str=test_func_name)
+    cons, bounds = test_func_class.test_func_constraint()
+    x0 = np.array([0.5, 0])
+    test_func = test_func_class.test_func_val
 
-    pic_my_sqp(rosen, res.x, sqp.mysqp_intermedium_result, bound=bounds)
+    # 使用内置的minimize求出“精确解”
+    # 我的函数与minimize函数对于Rosenbrock问题均有较好的结果，但是对于test_1函数则不是
+    # 当取x0=[0.5, 0]时我写的函数与minimize函数都可以找到test_1的极小值[0.87403194 2.28824573]
+    # 但是x0=[2., -1.5]时，minimize会失效（不知道为什么我的反而可以找到）
+    res = minimize(test_func, x0, method='SLSQP', bounds=bounds, constraints=cons)
+    print(f"result of optimize.minimize function:{res.x}")
+
+    # 用自己写的MySQP类求出自己解出的解
+    sqp = MySQP(input_func=test_func_class.test_func_val, cons=cons, bounds=bounds)
+    res_mine, lagrange_multiplier = sqp.my_sqp(x0=x0)
+    print(f"result of my sqp function:{res_mine}")
+
+    # 仅画出在x0条件下上述迭代的图示
+    pic_my_sqp(test_func_class, res.x, sqp.mysqp_intermedium_result, test_func_name=test_func_name)
+
+    # 可选操作，画出不同初值下的函数的结果
+    multi_x0_res_flag = True
+    if multi_x0_res_flag:
+        pic_my_sqp(test_func_class, res.x, test_func_name=test_func_name)

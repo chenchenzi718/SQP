@@ -9,13 +9,12 @@ class MySQP:
         rou对应着罚函数一维搜索的区间范围，epi对应着最终收敛结束的值，sigma为罚函数的参数
         x0为输入的初始值
     """
-    def __init__(self, input_func, cons, bounds, rou=1, epi=1e-5, sigma=100, x0=np.array([0.5, 0.0])):
+    def __init__(self, input_func, cons, bounds, rou=1, epi=1e-5, sigma=100):
         self.func = input_func
         self.cons = cons
         self.bounds = bounds
         self.epi = epi
         self.sigma = sigma
-        self.x0 = x0
         self.rou = rou
 
         # 将bounds转化为cons存储为列表
@@ -181,10 +180,12 @@ class MySQP:
         return alpha
 
     # sqp算法，得到函数的极小值，这里的W直接取的lagrange函数的hessian矩阵
-    def my_sqp(self):
+    def my_sqp(self, x0):
         k = 0
-        x_k = self.x0
-        self.mysqp_intermedium_result.append(x_k)
+        # numpy直接等于会产生关联性
+        x_k = x0.copy()
+        self.mysqp_intermedium_result = []
+        self.mysqp_intermedium_result.append(x_k.copy())
         lambda_k = np.zeros(len(self.cons_with_bounds))
 
         # 规定循环次数
@@ -205,7 +206,7 @@ class MySQP:
 
             alpha = self.my_linesearch(x_k, d_k)
             x_k += alpha * d_k
-            self.mysqp_intermedium_result.append(x_k)
+            self.mysqp_intermedium_result.append(x_k.copy())
             lambda_k += alpha * (lagrange_multiplier_k - lambda_k)
 
         # 输出
