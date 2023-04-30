@@ -1,6 +1,10 @@
 import sympy as sy
 from TestFuncClass import *
 
+"""
+    本文件完成了使用符号计算直接求解一个矩阵的jacobian矩阵与hessian矩阵的过程
+    并给出了将符号矩阵转化为数值的方法，在n_jacobi与n_hessian中呈现
+"""
 
 class JacobianEval:
     def __init__(self, funcs, vars):

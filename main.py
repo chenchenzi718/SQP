@@ -2,6 +2,10 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from MySQP import *
 
+"""
+    主函数文件，定义了可视化的函数pic_my_sqp以及调用主体部分
+"""
+
 
 # func内为TestFunc类，actual_x输入minimize函数得到的结果，my_sqp_medium_x输入的为mysqp函数迭代过程中产生的x_k
 # 如果actual_x 与 my_sqp_medium_x 均取None，则意味着我想要进行多次取初值作图的操作，因此会重新计算多个初值对应结果，无需传入这两个参数
@@ -77,7 +81,7 @@ def pic_my_sqp(func_class: TestFunc, actual_x=None, my_sqp_medium_x=None, test_f
 if __name__ == '__main__':
 
     # test_func_name 可以取 "Rosenbrock" 或者 “test_1”
-    test_func_name = "test_1"
+    test_func_name = "Rosenbrock"
 
     # 建立TestFunc类，根据输入的不同测试函数选择不同的约束条件
     test_func_class = TestFunc(test_func_str=test_func_name)
@@ -91,6 +95,7 @@ if __name__ == '__main__':
     # 但是x0=[2., -1.5]时，minimize会失效（不知道为什么我的反而可以找到）
     res = minimize(test_func, x0, method='SLSQP', bounds=bounds, constraints=cons)
     print(f"result of optimize.minimize function:{res.x}")
+    # print(res.fun)
 
     # 用自己写的MySQP类求出自己解出的解
     sqp = MySQP(input_func=test_func_class.test_func_val, cons=cons, bounds=bounds)

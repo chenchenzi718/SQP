@@ -1,7 +1,9 @@
 import numpy as np
 
 """
-    
+    本文件完成了类TestFunc的编写，根据输入的test_func_str的不同决定不同的测试函数
+    test_func_val函数计算对应的值
+    同时也在本类中给出了对应于测试函数的约束条件设置test_func_constraint
 """
 
 

@@ -1,13 +1,11 @@
 from JacobianEval import *
 from QPSolver import *
-from scipy.optimize import linesearch
 
 
 class MySQP:
     """
         默认输入的是二维的问题，input_func对应输入的优化函数，cons为约束，bounds对应着区间,
         rou对应着罚函数一维搜索的区间范围，epi对应着最终收敛结束的值，sigma为罚函数的参数
-        x0为输入的初始值
     """
     def __init__(self, input_func, cons, bounds, rou=1, epi=1e-5, sigma=100):
         self.func = input_func
@@ -179,12 +177,12 @@ class MySQP:
                 x1 = a + (1. - r) * (b - a)
         return alpha
 
-    # sqp算法，得到函数的极小值，这里的W直接取的lagrange函数的hessian矩阵
+    # sqp算法，得到函数的极小值，这里的W直接取的lagrange函数的hessian矩阵并作一次正定矫正
     def my_sqp(self, x0):
         k = 0
         # numpy直接等于会产生关联性
         x_k = x0.copy()
-        self.mysqp_intermedium_result = []
+        self.mysqp_intermedium_result = []   # 将迭代中间数据x_k,lambda_k均进行记录
         self.mysqp_intermedium_result.append(x_k.copy())
         lambda_k = np.zeros(len(self.cons_with_bounds))
 
@@ -201,9 +199,11 @@ class MySQP:
             qp_sol = MyQPSolver(W_k, g_k, cons=self.cons_with_bounds, cons_func_jac=A_k, cons_func_val=c_k)
             d_k, lagrange_multiplier_k = qp_sol.qp_dual_solver()
 
+            # 如果有d_k二范数小于epi，则退出循环
             if np.linalg.norm(d_k, ord=2) <= self.epi:
                 break
 
+            # 做一次一维搜索并更新x_k,lambda_k
             alpha = self.my_linesearch(x_k, d_k)
             x_k += alpha * d_k
             self.mysqp_intermedium_result.append(x_k.copy())
